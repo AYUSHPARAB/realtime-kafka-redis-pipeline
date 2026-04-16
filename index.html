@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Realtime Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            font-family: Arial;
+            margin: 40px;
+            background: #f5f5f5;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 2px 5px rgba(0,0,0,0.1);
+        }
+
+        canvas {
+            max-height: 300px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>📊 Real-Time Orders Dashboard</h1>
+
+<div class="card">
+    <h2>🆕 Latest Order</h2>
+    <div id="latest"></div>
+</div>
+
+<div class="card">
+    <h2>💰 Total Revenue</h2>
+    <div id="revenue" style="font-size: 28px; font-weight: bold;"></div>
+</div>
+
+<div class="card">
+    <h2>📦 Revenue by Product</h2>
+    <canvas id="productChart"></canvas>
+</div>
+
+<script>
+let chart;
+
+async function fetchData() {
+    try {
+        const latest = await fetch("http://127.0.0.1:8000/latest").then(res => res.json());
+        const revenue = await fetch("http://127.0.0.1:8000/revenue").then(res => res.json());
+        const products = await fetch("http://127.0.0.1:8000/products").then(res => res.json());
+
+        // Latest Order
+        document.getElementById("latest").innerHTML = `
+            <b>Order ID:</b> ${latest.order_id || "-"} <br>
+            <b>Product:</b> ${latest.product || "-"} <br>
+            <b>Price:</b> €${latest.price || "-"}
+        `;
+
+        // Revenue
+        document.getElementById("revenue").innerText = `€${revenue.total_revenue}`;
+
+        // Chart Data
+        const labels = Object.keys(products);
+        const values = Object.values(products).map(v => parseInt(v));
+
+        if (!chart) {
+            const ctx = document.getElementById("productChart").getContext("2d");
+
+            chart = new Chart(ctx, {
+                type: "bar",
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: "Revenue (€)",
+                        data: values
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        } else {
+            chart.data.labels = labels;
+            chart.data.datasets[0].data = values;
+            chart.update();
+        }
+
+    } catch (err) {
+        console.error("Error:", err);
+    }
+}
+
+setInterval(fetchData, 1000);
+fetchData();
+</script>
+
+</body>
+</html>
